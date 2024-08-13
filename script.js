@@ -18,7 +18,7 @@ window.addEventListener('resize', setCanvasSize);
 function startDrawing(e) {
     isDrawing = true;
     [lastX, lastY] = getPosition(e);
-    drawDot(lastX, lastY); // Draw a dot when starting
+    drawDot(lastX, lastY);
     updateMagnifier(lastX, lastY);
 }
 
@@ -60,9 +60,9 @@ function drawDot(x, y) {
 }
 
 function updateMagnifier(x, y) {
-    const magSize = 150;
+    const magSize = 120;
     const zoomFactor = 2;
-    const offsetY = -magSize - 10;
+    const offsetY = -magSize - 20;
 
     magnifier.width = magSize;
     magnifier.height = magSize;
@@ -71,7 +71,6 @@ function updateMagnifier(x, y) {
     magnifier.style.display = 'block';
 
     magCtx.save();
-    magCtx.clearRect(0, 0, magSize, magSize);
     magCtx.beginPath();
     magCtx.arc(magSize/2, magSize/2, magSize/2, 0, Math.PI * 2);
     magCtx.clip();
@@ -82,11 +81,6 @@ function updateMagnifier(x, y) {
     );
 
     magCtx.restore();
-    magCtx.beginPath();
-    magCtx.arc(magSize/2, magSize/2, magSize/2 - 1.5, 0, Math.PI * 2);
-    magCtx.strokeStyle = 'red';
-    magCtx.lineWidth = 3;
-    magCtx.stroke();
 }
 
 function handleStart(e) {
@@ -113,7 +107,6 @@ canvas.addEventListener('touchstart', handleStart, { passive: false });
 canvas.addEventListener('touchmove', handleMove, { passive: false });
 canvas.addEventListener('touchend', handleEnd, { passive: false });
 
-// Prevent default touch behaviors
 function preventDefault(e) {
     e.preventDefault();
 }
@@ -121,7 +114,6 @@ function preventDefault(e) {
 document.body.addEventListener('touchmove', preventDefault, { passive: false });
 document.body.addEventListener('scroll', preventDefault, { passive: false });
 
-// Disable context menu
 canvas.oncontextmenu = function(e) {
     e.preventDefault();
     return false;
