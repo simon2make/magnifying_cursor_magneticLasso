@@ -9,8 +9,8 @@ let lastY = 0;
 
 // Set canvas size
 function setCanvasSize() {
-    canvas.width = window.innerWidth - 2;
-    canvas.height = window.innerHeight - 2;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 }
 
 // Initialize
@@ -105,7 +105,8 @@ canvas.addEventListener('mouseout', stopDrawing);
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
     startDrawing(e.touches[0]);
-});
+}, { passive: false });
+
 canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
     if (isDrawing) {
@@ -113,27 +114,29 @@ canvas.addEventListener('touchmove', (e) => {
     } else {
         magnifier.style.display = 'none';
     }
-});
+}, { passive: false });
+
 canvas.addEventListener('touchend', (e) => {
     e.preventDefault();
     stopDrawing();
-});
-
-// Prevent scrolling when touching the canvas
-document.body.addEventListener("touchstart", function (e) {
-    if (e.target == canvas) {
-        e.preventDefault();
-    }
-}, { passive: false });
-document.body.addEventListener("touchend", function (e) {
-    if (e.target == canvas) {
-        e.preventDefault();
-    }
-}, { passive: false });
-document.body.addEventListener("touchmove", function (e) {
-    if (e.target == canvas) {
-        e.preventDefault();
-    }
 }, { passive: false });
 
-console.log('Script loaded with magnifier and touch support');
+// Prevent default touch behavior
+function preventDefault(e) {
+    e.preventDefault();
+}
+
+// Disable page refresh on pull-down
+document.body.addEventListener('touchmove', preventDefault, { passive: false });
+
+// Disable context menu
+canvas.oncontextmenu = function(e) {
+    e.preventDefault();
+    return false;
+};
+
+// Prevent any other default behavior that might interfere
+window.addEventListener('scroll', preventDefault, { passive: false });
+window.addEventListener('touchmove', preventDefault, { passive: false });
+
+console.log('Script loaded with magnifier and enhanced touch support');
