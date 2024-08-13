@@ -66,34 +66,24 @@ function updateMagnifier(x, y) {
 
     magnifier.width = magSize;
     magnifier.height = magSize;
-    magnifier.style.left = `${x - magSize / 2}px`;
+    magnifier.style.left = `${x - magSize/2}px`;
     magnifier.style.top = `${y + offsetY}px`;
     magnifier.style.display = 'block';
 
     magCtx.save();
-
     magCtx.clearRect(0, 0, magSize, magSize);
-
     magCtx.beginPath();
-    magCtx.arc(magSize / 2, magSize / 2, magSize / 2, 0, Math.PI * 2);
+    magCtx.arc(magSize/2, magSize/2, magSize/2, 0, Math.PI * 2);
     magCtx.clip();
 
-    magCtx.drawImage(
-        canvas,
-        x - magSize / (2 * zoomFactor),
-        y - magSize / (2 * zoomFactor),
-        magSize / zoomFactor,
-        magSize / zoomFactor,
-        0,
-        0,
-        magSize,
-        magSize
+    magCtx.drawImage(canvas,
+        x - magSize/(2*zoomFactor), y - magSize/(2*zoomFactor), magSize/zoomFactor, magSize/zoomFactor,
+        0, 0, magSize, magSize
     );
 
     magCtx.restore();
-
     magCtx.beginPath();
-    magCtx.arc(magSize / 2, magSize / 2, magSize / 2 - 1.5, 0, Math.PI * 2);
+    magCtx.arc(magSize/2, magSize/2, magSize/2 - 1.5, 0, Math.PI * 2);
     magCtx.strokeStyle = 'red';
     magCtx.lineWidth = 3;
     magCtx.stroke();
@@ -124,6 +114,26 @@ canvas.addEventListener('touchmove', (e) => {
         magnifier.style.display = 'none';
     }
 });
-canvas.addEventListener('touchend', stopDrawing);
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    stopDrawing();
+});
 
-console.log('Script loaded with magnifier');
+// Prevent scrolling when touching the canvas
+document.body.addEventListener("touchstart", function (e) {
+    if (e.target == canvas) {
+        e.preventDefault();
+    }
+}, { passive: false });
+document.body.addEventListener("touchend", function (e) {
+    if (e.target == canvas) {
+        e.preventDefault();
+    }
+}, { passive: false });
+document.body.addEventListener("touchmove", function (e) {
+    if (e.target == canvas) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
+console.log('Script loaded with magnifier and touch support');
