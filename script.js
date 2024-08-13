@@ -89,45 +89,42 @@ function updateMagnifier(x, y) {
     magCtx.stroke();
 }
 
-// Event listeners for mouse
-canvas.addEventListener('mousedown', startDrawing);
-canvas.addEventListener('mousemove', (e) => {
-    if (isDrawing) {
-        draw(e);
-    } else {
-        magnifier.style.display = 'none';
-    }
-});
-canvas.addEventListener('mouseup', stopDrawing);
-canvas.addEventListener('mouseout', stopDrawing);
-
-// Event listeners for touch
-canvas.addEventListener('touchstart', (e) => {
+// Handle both mouse and touch events
+function handleStart(e) {
     e.preventDefault();
-    startDrawing(e.touches[0]);
-}, { passive: false });
+    startDrawing(e.type.includes('mouse') ? e : e.touches[0]);
+}
 
-canvas.addEventListener('touchmove', (e) => {
+function handleMove(e) {
     e.preventDefault();
     if (isDrawing) {
-        draw(e.touches[0]);
-    } else {
-        magnifier.style.display = 'none';
+        draw(e.type.includes('mouse') ? e : e.touches[0]);
     }
-}, { passive: false });
+}
 
-canvas.addEventListener('touchend', (e) => {
+function handleEnd(e) {
     e.preventDefault();
     stopDrawing();
-}, { passive: false });
+}
+
+// Add event listeners
+canvas.addEventListener('mousedown', handleStart);
+canvas.addEventListener('mousemove', handleMove);
+canvas.addEventListener('mouseup', handleEnd);
+canvas.addEventListener('mouseout', handleEnd);
+
+canvas.addEventListener('touchstart', handleStart, { passive: false });
+canvas.addEventListener('touchmove', handleMove, { passive: false });
+canvas.addEventListener('touchend', handleEnd, { passive: false });
 
 // Prevent default touch behavior
 function preventDefault(e) {
     e.preventDefault();
 }
 
-// Disable page refresh on pull-down
+// Disable page refresh on pull-down and other default behaviors
 document.body.addEventListener('touchmove', preventDefault, { passive: false });
+window.addEventListener('scroll', preventDefault, { passive: false });
 
 // Disable context menu
 canvas.oncontextmenu = function(e) {
@@ -135,8 +132,4 @@ canvas.oncontextmenu = function(e) {
     return false;
 };
 
-// Prevent any other default behavior that might interfere
-window.addEventListener('scroll', preventDefault, { passive: false });
-window.addEventListener('touchmove', preventDefault, { passive: false });
-
-console.log('Script loaded with magnifier and enhanced touch support');
+console.log('Script loaded with unified mouse and touch handling');
