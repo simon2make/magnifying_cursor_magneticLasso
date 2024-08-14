@@ -61,8 +61,8 @@ function drawDot(x, y) {
 }
 
 function updateMagnifier(x, y) {
-    const magSize = 120;
-    const zoomFactor = 2;
+    const magSize = 100;
+    const zoomFactor = 2.5; // 확대 비율을 높임
 
     // 돋보기 위치 및 크기 설정
     magnifier.width = magSize;
@@ -74,16 +74,15 @@ function updateMagnifier(x, y) {
     magnifier.style.pointerEvents = 'none';
 
     magCtx.clearRect(0, 0, magSize, magSize);
-    
-    // 불투명한 흰색 배경 추가
-    magCtx.fillStyle = 'white';
-    magCtx.fillRect(0, 0, magSize, magSize);
-    
+
     // 원형 클리핑 영역 생성
-    magCtx.save();
     magCtx.beginPath();
     magCtx.arc(magSize/2, magSize/2, magSize/2 - 3, 0, Math.PI * 2);
     magCtx.clip();
+
+    // 반투명한 흰색 배경 추가
+    magCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    magCtx.fill();
 
     // 확대된 내용 그리기
     magCtx.drawImage(canvas,
@@ -91,17 +90,13 @@ function updateMagnifier(x, y) {
         0, 0, magSize, magSize
     );
 
-    magCtx.restore();
-
     // 빨간색 원형 테두리 그리기
     magCtx.beginPath();
     magCtx.arc(magSize/2, magSize/2, magSize/2 - 1.5, 0, Math.PI * 2);
     magCtx.strokeStyle = 'red';
-    magCtx.lineWidth = 3;
+    magCtx.lineWidth = 5; //테두리 두께.
     magCtx.stroke();
 }
-
-
 
 function handleStart(e) {
     e.preventDefault();
