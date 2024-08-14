@@ -40,6 +40,7 @@ function stopDrawing() {
     magnifier.style.display = 'none';
 }
 
+
 function getPosition(e) {
     const rect = canvas.getBoundingClientRect();
     let x, y;
@@ -62,26 +63,42 @@ function drawDot(x, y) {
 function updateMagnifier(x, y) {
     const magSize = 120;
     const zoomFactor = 2;
-    const offsetY = -magSize - 20;
 
-    magnifier.width = magSize;
-    magnifier.height = magSize;
+    // 돋보기 위치 및 크기 설정
+    magnifier.style.width = `${magSize}px`;
+    magnifier.style.height = `${magSize}px`;
     magnifier.style.left = `${x - magSize/2}px`;
-    magnifier.style.top = `${y + offsetY}px`;
+    magnifier.style.top = `${y - magSize - 20}px`; // 커서 위에 위치
     magnifier.style.display = 'block';
+    magnifier.style.position = 'absolute';
+    magnifier.style.border = '3px solid red';
+    magnifier.style.borderRadius = '50%';
+    magnifier.style.pointerEvents = 'none';
 
+    magCtx.clearRect(0, 0, magSize, magSize);
+    
+    // 원형 클리핑 영역 생성
     magCtx.save();
     magCtx.beginPath();
-    magCtx.arc(magSize/2, magSize/2, magSize/2, 0, Math.PI * 2);
+    magCtx.arc(magSize/2, magSize/2, magSize/2 - 3, 0, Math.PI * 2);
     magCtx.clip();
 
+    // 확대된 내용 그리기
     magCtx.drawImage(canvas,
         x - magSize/(2*zoomFactor), y - magSize/(2*zoomFactor), magSize/zoomFactor, magSize/zoomFactor,
         0, 0, magSize, magSize
     );
 
     magCtx.restore();
+
+    // 빨간색 원형 테두리 그리기
+    magCtx.beginPath();
+    magCtx.arc(magSize/2, magSize/2, magSize/2 - 1.5, 0, Math.PI * 2);
+    magCtx.strokeStyle = 'red';
+    magCtx.lineWidth = 3;
+    magCtx.stroke();
 }
+
 
 function handleStart(e) {
     e.preventDefault();
@@ -90,8 +107,11 @@ function handleStart(e) {
 
 function handleMove(e) {
     e.preventDefault();
-    draw(e.touches ? e.touches[0] : e);
+    if (isDrawing) {
+        draw(e.touches ? e.touches[0] : e);
+    }
 }
+
 
 function handleEnd(e) {
     e.preventDefault();
@@ -123,4 +143,7 @@ ctx.lineWidth = 2;
 ctx.lineCap = 'round';
 ctx.strokeStyle = 'black';
 
-console.log('Mobile-friendly script loaded with magnifier');
+// Initialize magnifier
+updateMagnifier(0, 0);
+
+console.log('Mobile-friendly script loaded with fixed magnifier');
