@@ -94,7 +94,7 @@ function updateMagnifier(x, y) {
     magCtx.beginPath();
     magCtx.arc(magSize/2, magSize/2, magSize/2 - 1.5, 0, Math.PI * 2);
     magCtx.strokeStyle = 'red';
-    magCtx.lineWidth = 5; //테두리 두께.
+    magCtx.lineWidth = 8; //테두리 두께.
     magCtx.stroke();
 }
 
@@ -198,8 +198,6 @@ function createSingleBlob() {
     ctx.closePath();
     ctx.fill();
 }
-
-
 
 function addWoundTexture(x, y, size) {
     const lineCount = Math.floor(Math.random() * 5) + 3; // 3~7개의 선
