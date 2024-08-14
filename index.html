@@ -11,7 +11,17 @@
         <button id="newPatientBtn">New Patient</button>
     </div>
     <canvas id="drawingCanvas"></canvas>
-    <canvas id="magnifier" width="120" height="120"></canvas>
+    <canvas id="magnifier" style="position: absolute; display: none;"></canvas>
+    <div id="buttonGroup">
+        <button id="drawBtn" class="icon-btn">
+            <i class="fas fa-pencil-alt"></i>
+            <span>Draw</span>
+        </button>
+        <button id="removeBtn" class="icon-btn">
+            <i class="fas fa-eraser"></i>
+            <span>Remove</span>
+        </button>
+    </div>
     <script src="script.js"></script>
 </body>
 </html>
