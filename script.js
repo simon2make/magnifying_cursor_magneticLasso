@@ -144,4 +144,90 @@ ctx.strokeStyle = 'black';
 // Initialize magnifier
 updateMagnifier(0, 0);
 
-console.log('Mobile-friendly script loaded with fixed magnifier');
+function createBlobs() {
+    const numBlobs = 1; // 1 또는 2개의 블롭 생성
+    
+    for (let i = 0; i < numBlobs; i++) {
+        createSingleBlob();
+    }
+}
+
+function createSingleBlob() {
+    const maxSize = Math.min(canvas.width, canvas.height) * 0.3; // 캔버스 크기의 30%를 최대 크기로
+    const size = Math.random() * (maxSize - 50) + 50; // 50에서 maxSize 사이의 랜덤 크기
+    const x = canvas.width / 2;
+    const y = canvas.height / 2;
+
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(200, 100, 100, 0.6)'; // 반투명한 붉은색 (상처 색상)
+
+    const points = 10 + Math.floor(Math.random() * 6); // 10~15개의 제어점 (더 적은 제어점)
+    let startAngle = Math.random() * Math.PI * 2;
+    let firstX, firstY;
+
+    for (let i = 0; i <= points; i++) {
+        const angle = startAngle + (i / points) * Math.PI * 2;
+        const radiusVariation = Math.random() * 0.3 + 0.5; // 0.85 ~ 1.15 사이의 변동 (더 작은 변동)
+        const radius = (size / 2) * radiusVariation;
+        const blobX = x + Math.cos(angle) * radius;
+        const blobY = y + Math.sin(angle) * radius;
+
+        if (i === 0) {
+            ctx.moveTo(blobX, blobY);
+            firstX = blobX;
+            firstY = blobY;
+        } else {
+            const prevAngle = startAngle + ((i - 1) / points) * Math.PI * 2;
+            const midAngle = (prevAngle + angle) / 2;
+            const controlRadius = radius * (Math.random() * 0.2 + 0.9); // 0.9 ~ 1.1 사이의 변동 (더 작은 변동)
+            const controlX = x + Math.cos(midAngle) * controlRadius;
+            const controlY = y + Math.sin(midAngle) * controlRadius;
+            
+            ctx.quadraticCurveTo(controlX, controlY, blobX, blobY);
+        }
+    }
+
+    // 마지막 점과 첫 점을 부드럽게 연결
+    const lastAngle = startAngle + Math.PI * 2;
+    const midAngle = (lastAngle + startAngle) / 2;
+    const midRadius = (size / 2) * (Math.random() * 0.2 + 0.9);
+    const controlX = x + Math.cos(midAngle) * midRadius;
+    const controlY = y + Math.sin(midAngle) * midRadius;
+    ctx.quadraticCurveTo(controlX, controlY, firstX, firstY);
+
+    ctx.closePath();
+    ctx.fill();
+}
+
+
+
+function addWoundTexture(x, y, size) {
+    const lineCount = Math.floor(Math.random() * 5) + 3; // 3~7개의 선
+    ctx.strokeStyle = 'rgba(150, 50, 50, 0.3)'; // 어두운 붉은색
+    ctx.lineWidth = 1;
+
+    for (let i = 0; i < lineCount; i++) {
+        const startAngle = Math.random() * Math.PI * 2;
+        const endAngle = startAngle + (Math.random() * Math.PI / 2 - Math.PI / 4);
+        const radius = size * (Math.random() * 0.3 + 0.2);
+
+        ctx.beginPath();
+        ctx.moveTo(
+            x + Math.cos(startAngle) * radius,
+            y + Math.sin(startAngle) * radius
+        );
+        ctx.lineTo(
+            x + Math.cos(endAngle) * radius,
+            y + Math.sin(endAngle) * radius
+        );
+        ctx.stroke();
+    }
+}
+
+document.getElementById('newPatientBtn').addEventListener('click', function() {
+    console.log('New Patient button clicked');
+    // 캔버스 지우기
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // 새로운 블롭들 생성
+    createBlobs();
+});
