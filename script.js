@@ -68,7 +68,7 @@ function updateMagnifier(x, y) {
     magnifier.width = magSize;
     magnifier.height = magSize;
     magnifier.style.left = `${x - magSize/2}px`;
-    magnifier.style.top = `${y - magSize - 20}px`; // 커서 위에 위치
+    magnifier.style.top = `${y - magSize - 40}px`; // 커서 위에 위치
     magnifier.style.display = 'block';
     magnifier.style.position = 'absolute';
     magnifier.style.pointerEvents = 'none';
