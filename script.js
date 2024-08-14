@@ -65,17 +65,19 @@ function updateMagnifier(x, y) {
     const zoomFactor = 2;
 
     // 돋보기 위치 및 크기 설정
-    magnifier.style.width = `${magSize}px`;
-    magnifier.style.height = `${magSize}px`;
+    magnifier.width = magSize;
+    magnifier.height = magSize;
     magnifier.style.left = `${x - magSize/2}px`;
     magnifier.style.top = `${y - magSize - 20}px`; // 커서 위에 위치
     magnifier.style.display = 'block';
     magnifier.style.position = 'absolute';
-    magnifier.style.border = '3px solid red';
-    magnifier.style.borderRadius = '50%';
     magnifier.style.pointerEvents = 'none';
 
     magCtx.clearRect(0, 0, magSize, magSize);
+    
+    // 불투명한 흰색 배경 추가
+    magCtx.fillStyle = 'white';
+    magCtx.fillRect(0, 0, magSize, magSize);
     
     // 원형 클리핑 영역 생성
     magCtx.save();
@@ -98,6 +100,7 @@ function updateMagnifier(x, y) {
     magCtx.lineWidth = 3;
     magCtx.stroke();
 }
+
 
 
 function handleStart(e) {
