@@ -17,6 +17,9 @@ let tempCtx = tempCanvas.getContext('2d');
 const drawColor = '#2196f3';  // Draw 버튼 색상
 const removeColor = '#f44336';  // Remove 버튼 색상
 
+let history = [];
+let currentStep = -1;
+
 function setCanvasSize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -41,7 +44,8 @@ function draw(e) {
     
     currentPath.push({x, y});
     
-    // Temporary line for visual feedback
+    // 임시 선 그리기 (시각적 피드백)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     redrawAll();
     ctx.beginPath();
     ctx.moveTo(currentPath[0].x, currentPath[0].y);
@@ -72,10 +76,14 @@ function stopDrawing() {
         } else if (currentMode === 'remove') {
             removeFromPath(path);
         }
+
+        // 현재 상태를 히스토리에 저장
+        saveToHistory();
     }
 
     currentPath = [];
     redrawAll();
+    updateUndoRedoButtons();
 }
 
 function removeFromPath(removePath) {
@@ -246,6 +254,41 @@ function updateButtonStyles() {
     removeBtn.classList.toggle('active', currentMode === 'remove');
 }
 
+function saveToHistory() {
+    // 현재 스텝 이후의 기록 제거
+    history = history.slice(0, currentStep + 1);
+    
+    // 현재 상태 저장 (Path2D 객체를 복사)
+    let pathCopy = new Path2D(drawnPath);
+    history.push(pathCopy);
+    currentStep++;
+    
+    updateUndoRedoButtons();
+}
+
+function undo() {
+    if (currentStep > 0) {
+        currentStep--;
+        drawnPath = new Path2D(history[currentStep]);
+        redrawAll();
+        updateUndoRedoButtons();
+    }
+}
+
+function redo() {
+    if (currentStep < history.length - 1) {
+        currentStep++;
+        drawnPath = new Path2D(history[currentStep]);
+        redrawAll();
+        updateUndoRedoButtons();
+    }
+}
+
+function updateUndoRedoButtons() {
+    document.getElementById('undoBtn').disabled = (currentStep <= 0);
+    document.getElementById('redoBtn').disabled = (currentStep >= history.length - 1);
+}
+
 canvas.addEventListener('mousedown', startDrawing);
 canvas.addEventListener('mousemove', (e) => {
     if (isDrawing) {
@@ -267,6 +310,10 @@ canvas.addEventListener('touchend', stopDrawing);
 
 document.body.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
 document.body.addEventListener('scroll', (e) => e.preventDefault(), { passive: false });
+document.getElementById('undoBtn').addEventListener('click', undo);
+document.getElementById('redoBtn').addEventListener('click', redo);
+
+saveToHistory();
 
 canvas.oncontextmenu = (e) => {
     e.preventDefault();
@@ -283,6 +330,11 @@ document.getElementById('newPatientBtn').addEventListener('click', function() {
     drawnPath = new Path2D();
     createBlobs();
     redrawAll();
+    
+    // 히스토리 초기화
+    history = [];
+    currentStep = -1;
+    saveToHistory();
 });
 
 document.getElementById('drawBtn').addEventListener('click', function() {
@@ -310,6 +362,11 @@ document.getElementById('resetBtn').addEventListener('click', function() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawnPath = new Path2D();
     redrawAll();
+    
+    // 히스토리 초기화
+    history = [];
+    currentStep = -1;
+    saveToHistory();
 });
 
 updateButtonStyles();
