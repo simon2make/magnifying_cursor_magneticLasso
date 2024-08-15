@@ -108,12 +108,12 @@ button i {
 }
 
 #magnifier {
-  position: absolute;
-  pointer-events: none;
-  //border: 2px solid #333;
-  border-radius: 50%;
-  display: none;
-}
+    position: absolute;
+    pointer-events: none;
+    border-radius: 50%;
+    display: none;
+    overflow: hidden;  /* 내용이 원 밖으로 나가지 않도록 함 */
+  }
 
 #drawBtn.active {
   background-color: #1565c0;

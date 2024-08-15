@@ -128,7 +128,7 @@ function updateMagnifier(x, y) {
     }
 
     const magSize = 100;
-    const zoomFactor = 2; // 줌 크기 조절
+    const zoomFactor = 2.5;
 
     magnifier.width = magSize;
     magnifier.height = magSize;
@@ -139,29 +139,27 @@ function updateMagnifier(x, y) {
     magCtx.fillStyle = 'white';
     magCtx.fillRect(0, 0, magSize, magSize);
 
-    magCtx.save();
-
+    // 클리핑 영역을 돋보기 크기와 일치시킴
     magCtx.beginPath();
     magCtx.arc(magSize/2, magSize/2, magSize/2, 0, Math.PI * 2);
     magCtx.clip();
-    // 돋보기를 위한 원형 클리핑 영역 생성
-    // 반지름을 (magSize/2 - 5)로 설정하여 가장자리에 5픽셀의 테두리 여백을 남김
+
     magCtx.drawImage(canvas,
         x - magSize/(2*zoomFactor), y - magSize/(2*zoomFactor), magSize/zoomFactor, magSize/zoomFactor,
         0, 0, magSize, magSize
     );
 
-    magCtx.restore();
-
     // 프레임 색상 설정
     const frameColor = currentMode === 'draw' ? drawColor : removeColor;
 
+    // 프레임 그리기 (돋보기 내부에)
     magCtx.beginPath();
     magCtx.arc(magSize/2, magSize/2, magSize/2 - 2, 0, Math.PI * 2);
     magCtx.strokeStyle = frameColor;
     magCtx.lineWidth = 3;
     magCtx.stroke();
 
+    // 십자선 그리기
     magCtx.beginPath();
     magCtx.moveTo(magSize/2, 0);
     magCtx.lineTo(magSize/2, magSize);
