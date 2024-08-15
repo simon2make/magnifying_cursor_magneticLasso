@@ -1,10 +1,25 @@
-body,
-html {
-  overscroll-behavior: contain;
+body, html {
   margin: 0;
   padding: 0;
   overflow: hidden;
   height: 100%;
+  font-family: "Inter", sans-serif;
+  overscroll-behavior: contain;
+}
+
+#drawingCanvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  cursor: default;
+}
+
+#magnifier {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  display: none;
+  overflow: hidden;
 }
 
 #newPatientContainer {
@@ -21,6 +36,7 @@ html {
   left: 20px;
   z-index: 100;
   display: flex;
+  align-items: flex-end;
 }
 
 #editToolsContainer {
@@ -29,6 +45,11 @@ html {
   right: 20px;
   z-index: 100;
   display: flex;
+}
+
+.button-group {
+  display: flex;
+  margin-left: 20px;
 }
 
 .button-wrapper {
@@ -49,7 +70,6 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: "Inter", sans-serif;
   transition: background-color 0.3s ease;
 }
 
@@ -61,7 +81,6 @@ button i {
   font-size: 12px;
   color: #999;
   margin-top: 5px;
-  font-family: "Inter", sans-serif;
   font-weight: 500;
 }
 
@@ -71,7 +90,6 @@ button i {
   width: auto;
   height: auto;
   padding: 10px 20px;
-  font-family: "Inter", sans-serif;
   font-weight: 600;
 }
 
@@ -89,8 +107,7 @@ button i {
   color: white;
 }
 
-#undoBtn,
-#redoBtn {
+#undoBtn, #redoBtn {
   background-color: #ff9800;
   color: white;
 }
@@ -100,20 +117,15 @@ button i {
   color: white;
 }
 
-#drawingCanvas {
-  display: block;
-  width: 100vw;
-  height: 100vh;
-  cursor: default;
+#toggleMagneticLassoBtn {
+  background-color: #d3d3d3;
+  color: #333;
 }
 
-#magnifier {
-    position: absolute;
-    pointer-events: none;
-    border-radius: 50%;
-    display: none;
-    overflow: hidden;  /* 내용이 원 밖으로 나가지 않도록 함 */
-  }
+#toggleMagneticLassoBtn.active {
+  background-color: #4caf50;
+  color: white;
+}
 
 #drawBtn.active {
   background-color: #1565c0;

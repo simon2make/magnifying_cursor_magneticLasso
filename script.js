@@ -1,9 +1,12 @@
+// 캔버스 및 컨텍스트 설정
 const canvas = document.getElementById('drawingCanvas');
 const ctx = canvas.getContext('2d');
-// const customCursor = document.getElementById('customCursor');
 const magnifier = document.getElementById('magnifier');
 const magCtx = magnifier.getContext('2d');
+const tempCanvas = document.createElement('canvas');
+const tempCtx = tempCanvas.getContext('2d');
 
+// 상태 변수
 let isDrawing = false;
 let lastX = 0;
 let lastY = 0;
@@ -11,15 +14,26 @@ let currentMode = 'draw';
 let blobData = [];
 let currentPath = [];
 let drawnPath = new Path2D();
-let tempCanvas = document.createElement('canvas');
-let tempCtx = tempCanvas.getContext('2d');
 
-const drawColor = '#2196f3';  // Draw 버튼 색상
-const removeColor = '#f44336';  // Remove 버튼 색상
+// 색상 설정
+const drawColor = '#2196f3';
+const removeColor = '#f44336';
 
+// 히스토리 관련 변수
 let history = [];
 let currentStep = -1;
 
+// 마그네틱 라쏘 관련 변수
+let isUsingMagneticLasso = true;
+let magneticThreshold = 20;
+let blobEdges = [];
+
+// DOM 요소
+const toggleMagneticLassoBtn = document.getElementById('toggleMagneticLassoBtn');
+const magneticLassoLabel = document.getElementById('magneticLassoLabel');
+const magneticThresholdSlider = document.getElementById('magneticThresholdSlider');
+
+// 유틸리티 함수
 function setCanvasSize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -28,9 +42,20 @@ function setCanvasSize() {
     redrawAll();
 }
 
-setCanvasSize();
-window.addEventListener('resize', setCanvasSize);
+function getPosition(e) {
+    const rect = canvas.getBoundingClientRect();
+    let x, y;
+    if (e.touches) {
+        x = e.touches[0].clientX - rect.left;
+        y = e.touches[0].clientY - rect.top;
+    } else {
+        x = e.clientX - rect.left;
+        y = e.clientY - rect.top;
+    }
+    return [x, y];
+}
 
+// 그리기 관련 함수
 function startDrawing(e) {
     isDrawing = true;
     [lastX, lastY] = getPosition(e);
@@ -42,9 +67,16 @@ function draw(e) {
     if (!isDrawing) return;
     let [x, y] = getPosition(e);
     
+    if (isUsingMagneticLasso) {
+        const magneticPoint = findNearestEdgePoint(x, y, blobEdges);
+        if (magneticPoint) {
+            x = magneticPoint.x;
+            y = magneticPoint.y;
+        }
+    }
+    
     currentPath.push({x, y});
     
-    // 임시 선 그리기 (시각적 피드백)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     redrawAll();
     ctx.beginPath();
@@ -77,7 +109,6 @@ function stopDrawing() {
             removeFromPath(path);
         }
 
-        // 현재 상태를 히스토리에 저장
         saveToHistory();
     }
 
@@ -116,19 +147,6 @@ function redrawAll() {
     ctx.fill(drawnPath);
 }
 
-function getPosition(e) {
-    const rect = canvas.getBoundingClientRect();
-    let x, y;
-    if (e.touches) {
-        x = e.touches[0].clientX - rect.left;
-        y = e.touches[0].clientY - rect.top;
-    } else {
-        x = e.clientX - rect.left;
-        y = e.clientY - rect.top;
-    }
-    return [x, y];
-}
-
 function updateMagnifier(x, y) {
     if (!isDrawing) {
         magnifier.style.display = 'none';
@@ -147,7 +165,6 @@ function updateMagnifier(x, y) {
     magCtx.fillStyle = 'white';
     magCtx.fillRect(0, 0, magSize, magSize);
 
-    // 클리핑 영역을 돋보기 크기와 일치시킴
     magCtx.beginPath();
     magCtx.arc(magSize/2, magSize/2, magSize/2, 0, Math.PI * 2);
     magCtx.clip();
@@ -157,17 +174,14 @@ function updateMagnifier(x, y) {
         0, 0, magSize, magSize
     );
 
-    // 프레임 색상 설정
     const frameColor = currentMode === 'draw' ? drawColor : removeColor;
 
-    // 프레임 그리기 (돋보기 내부에)
     magCtx.beginPath();
     magCtx.arc(magSize/2, magSize/2, magSize/2 - 2, 0, Math.PI * 2);
     magCtx.strokeStyle = frameColor;
     magCtx.lineWidth = 3;
     magCtx.stroke();
 
-    // 십자선 그리기
     magCtx.beginPath();
     magCtx.moveTo(magSize/2, 0);
     magCtx.lineTo(magSize/2, magSize);
@@ -178,6 +192,7 @@ function updateMagnifier(x, y) {
     magCtx.stroke();
 }
 
+// Blob 관련 함수
 function createBlobs() {
     blobData = [];
     const numBlobs = 1;
@@ -185,7 +200,8 @@ function createBlobs() {
     for (let i = 0; i < numBlobs; i++) {
         createSingleBlob();
     }
-    redrawAll();  // Blob 생성 후 다시 그리기
+    redrawAll();
+    blobEdges = detectBlobEdges();
 }
 
 function createSingleBlob() {
@@ -197,7 +213,6 @@ function createSingleBlob() {
     let blobPath = new Path2D();
     const points = 10 + Math.floor(Math.random() * 6);
     let startAngle = Math.random() * Math.PI * 2;
-    let firstX, firstY;
     let blobPoints = [];
 
     for (let i = 0; i <= points; i++) {
@@ -211,8 +226,6 @@ function createSingleBlob() {
 
         if (i === 0) {
             blobPath.moveTo(blobX, blobY);
-            firstX = blobX;
-            firstY = blobY;
         } else {
             const prevAngle = startAngle + ((i - 1) / points) * Math.PI * 2;
             const midAngle = (prevAngle + angle) / 2;
@@ -241,24 +254,10 @@ function redrawBlobs() {
     });
 }
 
-function toggleDrawMode() {
-    isDrawMode = !isDrawMode;
-    updateButtonStyles();
-}
-
-function updateButtonStyles() {
-    const drawBtn = document.getElementById('drawBtn');
-    const removeBtn = document.getElementById('removeBtn');
-    
-    drawBtn.classList.toggle('active', currentMode === 'draw');
-    removeBtn.classList.toggle('active', currentMode === 'remove');
-}
-
+// 히스토리 관련 함수
 function saveToHistory() {
-    // 현재 스텝 이후의 기록 제거
     history = history.slice(0, currentStep + 1);
     
-    // 현재 상태 저장 (Path2D 객체를 복사)
     let pathCopy = new Path2D(drawnPath);
     history.push(pathCopy);
     currentStep++;
@@ -289,86 +288,154 @@ function updateUndoRedoButtons() {
     document.getElementById('redoBtn').disabled = (currentStep >= history.length - 1);
 }
 
-canvas.addEventListener('mousedown', startDrawing);
-canvas.addEventListener('mousemove', (e) => {
-    if (isDrawing) {
-        draw(e);
+// 마그네틱 라쏘 관련 함수
+function detectBlobEdges() {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+    const edges = [];
+
+    for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+            const idx = (y * width + x) * 4;
+            if (data[idx + 3] > 0 && (
+                data[idx - 4 + 3] === 0 ||
+                data[idx + 4 + 3] === 0 ||
+                data[idx - width * 4 + 3] === 0 ||
+                data[idx + width * 4 + 3] === 0
+            )) {
+                edges.push({x, y});
+            }
+        }
     }
-});
-canvas.addEventListener('mouseup', stopDrawing);
-canvas.addEventListener('mouseout', stopDrawing);
+    return edges;
+}
 
-canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    startDrawing(e.touches[0]);
-}, { passive: false });
-canvas.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    draw(e.touches[0]);
-}, { passive: false });
-canvas.addEventListener('touchend', stopDrawing);
+function findNearestEdgePoint(x, y, edges) {
+    let nearest = null;
+    let minDistance = Infinity;
+    for (let edge of edges) {
+        const dist = Math.sqrt((edge.x - x) ** 2 + (edge.y - y) ** 2);
+        if (dist < minDistance && dist < magneticThreshold) {
+            minDistance = dist;
+            nearest = edge;
+        }
+    }
+    return nearest;
+}
 
-document.body.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
-document.body.addEventListener('scroll', (e) => e.preventDefault(), { passive: false });
-document.getElementById('undoBtn').addEventListener('click', undo);
-document.getElementById('redoBtn').addEventListener('click', redo);
+function updateMagneticLassoButton() {
+    toggleMagneticLassoBtn.classList.toggle('active', isUsingMagneticLasso);
+    magneticLassoLabel.textContent = isUsingMagneticLasso ? 'Magnetic On' : 'Magnetic Off';
+}
 
-saveToHistory();
+// UI 관련 함수
+function updateButtonStyles() {
+    const drawBtn = document.getElementById('drawBtn');
+    const removeBtn = document.getElementById('removeBtn');
+    
+    drawBtn.classList.toggle('active', currentMode === 'draw');
+    removeBtn.classList.toggle('active', currentMode === 'remove');
+}
 
-canvas.oncontextmenu = (e) => {
-    e.preventDefault();
-    return false;
-};
+// 초기화 및 이벤트 리스너 설정
+function init() {
+    setCanvasSize();
+    createBlobs();
+    redrawAll();
+    updateButtonStyles();
+    updateMagneticLassoButton();
+    saveToHistory();
 
-ctx.lineWidth = 2;
-ctx.lineCap = 'round';
-ctx.strokeStyle = 'black';
+    // 이벤트 리스너 설정
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
 
-document.getElementById('newPatientBtn').addEventListener('click', function() {
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        startDrawing(e.touches[0]);
+    }, { passive: false });
+    canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        draw(e.touches[0]);
+    }, { passive: false });
+    canvas.addEventListener('touchend', stopDrawing);
+
+    document.body.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+    document.body.addEventListener('scroll', (e) => e.preventDefault(), { passive: false });
+
+    document.getElementById('undoBtn').addEventListener('click', undo);
+    document.getElementById('redoBtn').addEventListener('click', redo);
+    document.getElementById('newPatientBtn').addEventListener('click', createNewPatient);
+    document.getElementById('drawBtn').addEventListener('click', () => {
+        currentMode = 'draw';
+        updateButtonStyles();
+    });
+    document.getElementById('removeBtn').addEventListener('click', () => {
+        currentMode = 'remove';
+        updateButtonStyles();
+    });
+    document.getElementById('resetBtn').addEventListener('click', resetDrawing);
+
+    toggleMagneticLassoBtn.addEventListener('click', toggleMagneticLasso);
+
+    if (magneticThresholdSlider) {
+        magneticThresholdSlider.addEventListener('input', updateMagneticThreshold);
+    }
+
+    window.addEventListener('resize', () => {
+        setCanvasSize();
+        createBlobs();
+        redrawAll();
+    });
+
+    canvas.oncontextmenu = (e) => {
+        e.preventDefault();
+        return false;
+    };
+
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'black';
+}
+
+// 버튼 클릭 이벤트 핸들러
+function createNewPatient() {
     console.log('New Patient button clicked');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawnPath = new Path2D();
     createBlobs();
     redrawAll();
     
-    // 히스토리 초기화
     history = [];
     currentStep = -1;
     saveToHistory();
-});
+}
 
-document.getElementById('drawBtn').addEventListener('click', function() {
-    currentMode = 'draw';
-    updateButtonStyles();
-});
-
-document.getElementById('removeBtn').addEventListener('click', function() {
-    currentMode = 'remove';
-    updateButtonStyles();
-});
-
-document.getElementById('undoBtn').addEventListener('click', function() {
-    console.log('Undo button clicked');
-    // Implement undo functionality
-});
-
-document.getElementById('redoBtn').addEventListener('click', function() {
-    console.log('Redo button clicked');
-    // Implement redo functionality
-});
-
-document.getElementById('resetBtn').addEventListener('click', function() {
+function resetDrawing() {
     console.log('Reset button clicked');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawnPath = new Path2D();
     redrawAll();
     
-    // 히스토리 초기화
     history = [];
     currentStep = -1;
     saveToHistory();
-});
+}
 
-updateButtonStyles();
-createBlobs();
-redrawAll();
+function toggleMagneticLasso() {
+    isUsingMagneticLasso = !isUsingMagneticLasso;
+    updateMagneticLassoButton();
+    console.log('Magnetic Lasso mode:', isUsingMagneticLasso ? 'enabled' : 'disabled');
+}
+
+function updateMagneticThreshold() {
+    magneticThreshold = parseInt(this.value);
+    console.log('Magnetic threshold set to:', magneticThreshold);
+}
+
+// 페이지 로드 시 초기화
+window.addEventListener('load', init);
