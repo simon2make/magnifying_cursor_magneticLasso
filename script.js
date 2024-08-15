@@ -9,11 +9,15 @@ let lastY = 0;
 let isDrawMode = true;
 let blobData = [];
 let currentPath = [];
-let drawnAreas = [];
+let drawnPath = new Path2D();
+let tempCanvas = document.createElement('canvas');
+let tempCtx = tempCanvas.getContext('2d');
 
 function setCanvasSize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
     redrawAll();
 }
 
@@ -52,70 +56,57 @@ function stopDrawing() {
     magnifier.style.display = 'none';
 
     if (currentPath.length > 2) {
+        let path = new Path2D();
+        path.moveTo(currentPath[0].x, currentPath[0].y);
+        for (let point of currentPath) {
+            path.lineTo(point.x, point.y);
+        }
+        path.closePath();
+
         if (isDrawMode) {
-            drawnAreas.push(currentPath);
-            redrawAll();
+            drawnPath.addPath(path);
         } else {
-            eraseInsidePath();
+            removeFromPath(path);
         }
     }
 
     currentPath = [];
+    redrawAll();
+}
+
+function removeFromPath(removePath) {
+    // Clear the temporary canvas
+    tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+    
+    // Draw the current path
+    tempCtx.fillStyle = 'black';
+    tempCtx.fill(drawnPath);
+    
+    // Remove the new path
+    tempCtx.globalCompositeOperation = 'destination-out';
+    tempCtx.fill(removePath);
+    tempCtx.globalCompositeOperation = 'source-over';
+    
+    // Create a new path from the result
+    let imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+    drawnPath = new Path2D();
+    
+    for (let y = 0; y < tempCanvas.height; y++) {
+        for (let x = 0; x < tempCanvas.width; x++) {
+            let index = (y * tempCanvas.width + x) * 4;
+            if (imageData.data[index + 3] > 0) {  // If pixel is not transparent
+                drawnPath.rect(x, y, 1, 1);
+            }
+        }
+    }
 }
 
 function redrawAll() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     redrawBlobs();
-    redrawDrawnAreas();
+    ctx.fillStyle = 'rgba(0, 100, 255, 0.3)';
+    ctx.fill(drawnPath);
 }
-
-function redrawDrawnAreas() {
-    if (drawnAreas.length === 0) return;
-
-    ctx.fillStyle = 'rgba(0, 100, 255, 0.3)'; // Semi-transparent blue
-    ctx.beginPath();
-
-    for (let path of drawnAreas) {
-        ctx.moveTo(path[0].x, path[0].y);
-        for (let point of path) {
-            ctx.lineTo(point.x, point.y);
-        }
-        ctx.closePath();
-    }
-
-    ctx.fill('nonzero'); // Use 'nonzero' fill rule for union
-}
-
-function eraseInsidePath() {
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-
-    for (let x = 0; x < canvas.width; x++) {
-        for (let y = 0; y < canvas.height; y++) {
-            if (isPointInPath(x, y)) {
-                const index = (y * canvas.width + x) * 4;
-                data[index + 3] = 0; // Set alpha to 0 (transparent)
-            }
-        }
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-    redrawAll();
-}
-
-function isPointInPath(x, y) {
-    let isInside = false;
-    for (let i = 0, j = currentPath.length - 1; i < currentPath.length; j = i++) {
-        const xi = currentPath[i].x, yi = currentPath[i].y;
-        const xj = currentPath[j].x, yj = currentPath[j].y;
-        
-        const intersect = ((yi > y) !== (yj > y))
-            && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-        if (intersect) isInside = !isInside;
-    }
-    return isInside;
-}
-
 function getPosition(e) {
     const rect = canvas.getBoundingClientRect();
     let x, y;
@@ -177,9 +168,7 @@ function createSingleBlob() {
     const x = canvas.width / 2;
     const y = canvas.height / 2;
 
-    ctx.beginPath();
-    ctx.fillStyle = 'rgba(200, 100, 100, 0.6)';
-
+    let blobPath = new Path2D();
     const points = 10 + Math.floor(Math.random() * 6);
     let startAngle = Math.random() * Math.PI * 2;
     let firstX, firstY;
@@ -195,7 +184,7 @@ function createSingleBlob() {
         blobPoints.push({x: blobX, y: blobY});
 
         if (i === 0) {
-            ctx.moveTo(blobX, blobY);
+            blobPath.moveTo(blobX, blobY);
             firstX = blobX;
             firstY = blobY;
         } else {
@@ -205,7 +194,7 @@ function createSingleBlob() {
             const controlX = x + Math.cos(midAngle) * controlRadius;
             const controlY = y + Math.sin(midAngle) * controlRadius;
             
-            ctx.quadraticCurveTo(controlX, controlY, blobX, blobY);
+            blobPath.quadraticCurveTo(controlX, controlY, blobX, blobY);
         }
     }
 
@@ -214,12 +203,12 @@ function createSingleBlob() {
     const midRadius = (size / 2) * (Math.random() * 0.2 + 0.9);
     const controlX = x + Math.cos(midAngle) * midRadius;
     const controlY = y + Math.sin(midAngle) * midRadius;
-    ctx.quadraticCurveTo(controlX, controlY, firstX, firstY);
+    blobPath.quadraticCurveTo(controlX, controlY, firstX, firstY);
 
-    ctx.closePath();
-    ctx.fill();
+    blobPath.closePath();
 
     blobData.push({
+        path: blobPath,
         center: {x, y},
         size: size,
         points: blobPoints
@@ -228,19 +217,8 @@ function createSingleBlob() {
 
 function redrawBlobs() {
     blobData.forEach(blob => {
-        ctx.beginPath();
         ctx.fillStyle = 'rgba(200, 100, 100, 0.6)';
-        
-        blob.points.forEach((point, index) => {
-            if (index === 0) {
-                ctx.moveTo(point.x, point.y);
-            } else {
-                ctx.lineTo(point.x, point.y);
-            }
-        });
-        
-        ctx.closePath();
-        ctx.fill();
+        ctx.fill(blob.path);
     });
 }
 
@@ -292,9 +270,9 @@ ctx.strokeStyle = 'black';
 document.getElementById('newPatientBtn').addEventListener('click', function() {
     console.log('New Patient button clicked');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawnAreas = [];
+    drawnPath = new Path2D();
     createBlobs();
-    redrawAll(); // Add this line to ensure the new blob is drawn immediately
+    redrawAll();
 });
 
 document.getElementById('drawBtn').addEventListener('click', function() {
@@ -309,4 +287,4 @@ document.getElementById('removeBtn').addEventListener('click', function() {
 
 updateButtonStyles();
 createBlobs();
-redrawAll(); // Add this line to ensure the initial blob is drawn
+redrawAll();
