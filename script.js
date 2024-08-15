@@ -1,17 +1,21 @@
 const canvas = document.getElementById('drawingCanvas');
 const ctx = canvas.getContext('2d');
+// const customCursor = document.getElementById('customCursor');
 const magnifier = document.getElementById('magnifier');
 const magCtx = magnifier.getContext('2d');
 
 let isDrawing = false;
 let lastX = 0;
 let lastY = 0;
-let isDrawMode = true;
+let currentMode = 'draw';
 let blobData = [];
 let currentPath = [];
 let drawnPath = new Path2D();
 let tempCanvas = document.createElement('canvas');
 let tempCtx = tempCanvas.getContext('2d');
+
+const drawColor = '#2196f3';  // Draw 버튼 색상
+const removeColor = '#f44336';  // Remove 버튼 색상
 
 function setCanvasSize() {
     canvas.width = window.innerWidth;
@@ -63,9 +67,9 @@ function stopDrawing() {
         }
         path.closePath();
 
-        if (isDrawMode) {
+        if (currentMode === 'draw') {
             drawnPath.addPath(path);
-        } else {
+        } else if (currentMode === 'remove') {
             removeFromPath(path);
         }
     }
@@ -75,26 +79,22 @@ function stopDrawing() {
 }
 
 function removeFromPath(removePath) {
-    // Clear the temporary canvas
     tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
     
-    // Draw the current path
     tempCtx.fillStyle = 'black';
     tempCtx.fill(drawnPath);
     
-    // Remove the new path
     tempCtx.globalCompositeOperation = 'destination-out';
     tempCtx.fill(removePath);
     tempCtx.globalCompositeOperation = 'source-over';
     
-    // Create a new path from the result
     let imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
     drawnPath = new Path2D();
     
     for (let y = 0; y < tempCanvas.height; y++) {
         for (let x = 0; x < tempCanvas.width; x++) {
             let index = (y * tempCanvas.width + x) * 4;
-            if (imageData.data[index + 3] > 0) {  // If pixel is not transparent
+            if (imageData.data[index + 3] > 0) {
                 drawnPath.rect(x, y, 1, 1);
             }
         }
@@ -107,6 +107,7 @@ function redrawAll() {
     ctx.fillStyle = 'rgba(0, 100, 255, 0.3)';
     ctx.fill(drawnPath);
 }
+
 function getPosition(e) {
     const rect = canvas.getBoundingClientRect();
     let x, y;
@@ -121,35 +122,53 @@ function getPosition(e) {
 }
 
 function updateMagnifier(x, y) {
+    if (!isDrawing) {
+        magnifier.style.display = 'none';
+        return;
+    }
+
     const magSize = 100;
-    const zoomFactor = 2.5;
+    const zoomFactor = 2; // 줌 크기 조절
 
     magnifier.width = magSize;
     magnifier.height = magSize;
     magnifier.style.left = `${x - magSize/2}px`;
     magnifier.style.top = `${y - magSize - 30}px`;
     magnifier.style.display = 'block';
-    magnifier.style.position = 'absolute';
-    magnifier.style.pointerEvents = 'none';
 
-    magCtx.clearRect(0, 0, magSize, magSize);
+    magCtx.fillStyle = 'white';
+    magCtx.fillRect(0, 0, magSize, magSize);
+
+    magCtx.save();
 
     magCtx.beginPath();
-    magCtx.arc(magSize/2, magSize/2, magSize/2 - 3, 0, Math.PI * 2);
+    magCtx.arc(magSize/2, magSize/2, magSize/2, 0, Math.PI * 2);
     magCtx.clip();
-
-    magCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-    magCtx.fill();
-
+    // 돋보기를 위한 원형 클리핑 영역 생성
+    // 반지름을 (magSize/2 - 5)로 설정하여 가장자리에 5픽셀의 테두리 여백을 남김
     magCtx.drawImage(canvas,
         x - magSize/(2*zoomFactor), y - magSize/(2*zoomFactor), magSize/zoomFactor, magSize/zoomFactor,
         0, 0, magSize, magSize
     );
 
+    magCtx.restore();
+
+    // 프레임 색상 설정
+    const frameColor = currentMode === 'draw' ? drawColor : removeColor;
+
     magCtx.beginPath();
-    magCtx.arc(magSize/2, magSize/2, magSize/2 - 1.5, 0, Math.PI * 2);
-    magCtx.strokeStyle = 'red';
-    magCtx.lineWidth = 8;
+    magCtx.arc(magSize/2, magSize/2, magSize/2 - 2, 0, Math.PI * 2);
+    magCtx.strokeStyle = frameColor;
+    magCtx.lineWidth = 3;
+    magCtx.stroke();
+
+    magCtx.beginPath();
+    magCtx.moveTo(magSize/2, 0);
+    magCtx.lineTo(magSize/2, magSize);
+    magCtx.moveTo(0, magSize/2);
+    magCtx.lineTo(magSize, magSize/2);
+    magCtx.strokeStyle = 'rgba(0,0,0,0.2)';
+    magCtx.lineWidth = 1;
     magCtx.stroke();
 }
 
@@ -160,6 +179,7 @@ function createBlobs() {
     for (let i = 0; i < numBlobs; i++) {
         createSingleBlob();
     }
+    redrawAll();  // Blob 생성 후 다시 그리기
 }
 
 function createSingleBlob() {
@@ -198,13 +218,6 @@ function createSingleBlob() {
         }
     }
 
-    const lastAngle = startAngle + Math.PI * 2;
-    const midAngle = (lastAngle + startAngle) / 2;
-    const midRadius = (size / 2) * (Math.random() * 0.2 + 0.9);
-    const controlX = x + Math.cos(midAngle) * midRadius;
-    const controlY = y + Math.sin(midAngle) * midRadius;
-    blobPath.quadraticCurveTo(controlX, controlY, firstX, firstY);
-
     blobPath.closePath();
 
     blobData.push({
@@ -216,8 +229,8 @@ function createSingleBlob() {
 }
 
 function redrawBlobs() {
+    ctx.fillStyle = 'rgba(200, 100, 100, 0.6)';
     blobData.forEach(blob => {
-        ctx.fillStyle = 'rgba(200, 100, 100, 0.6)';
         ctx.fill(blob.path);
     });
 }
@@ -231,17 +244,16 @@ function updateButtonStyles() {
     const drawBtn = document.getElementById('drawBtn');
     const removeBtn = document.getElementById('removeBtn');
     
-    if (isDrawMode) {
-        drawBtn.style.backgroundColor = '#4CAF50';
-        removeBtn.style.backgroundColor = '#808080';
-    } else {
-        drawBtn.style.backgroundColor = '#808080';
-        removeBtn.style.backgroundColor = '#4CAF50';
-    }
+    drawBtn.classList.toggle('active', currentMode === 'draw');
+    removeBtn.classList.toggle('active', currentMode === 'remove');
 }
 
 canvas.addEventListener('mousedown', startDrawing);
-canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mousemove', (e) => {
+    if (isDrawing) {
+        draw(e);
+    }
+});
 canvas.addEventListener('mouseup', stopDrawing);
 canvas.addEventListener('mouseout', stopDrawing);
 
@@ -276,13 +288,30 @@ document.getElementById('newPatientBtn').addEventListener('click', function() {
 });
 
 document.getElementById('drawBtn').addEventListener('click', function() {
-    isDrawMode = true;
+    currentMode = 'draw';
     updateButtonStyles();
 });
 
 document.getElementById('removeBtn').addEventListener('click', function() {
-    isDrawMode = false;
+    currentMode = 'remove';
     updateButtonStyles();
+});
+
+document.getElementById('undoBtn').addEventListener('click', function() {
+    console.log('Undo button clicked');
+    // Implement undo functionality
+});
+
+document.getElementById('redoBtn').addEventListener('click', function() {
+    console.log('Redo button clicked');
+    // Implement redo functionality
+});
+
+document.getElementById('resetBtn').addEventListener('click', function() {
+    console.log('Reset button clicked');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawnPath = new Path2D();
+    redrawAll();
 });
 
 updateButtonStyles();

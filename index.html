@@ -5,23 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mobile-Friendly Drawing Tool with Magnifier</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-    <div id="toolbar">
-        <button id="newPatientBtn">New Patient</button>
+    <div id="newPatientContainer">
+        <button id="newPatientBtn"><i class="fas fa-user-plus"></i> New Patient</button>
     </div>
+
+    <div id="drawingToolsContainer">
+        <div class="button-wrapper">
+            <button id="drawBtn"><i class="fas fa-pencil-alt"></i></button>
+            <span class="button-label">Draw</span>
+        </div>
+        <div class="button-wrapper">
+            <button id="removeBtn"><i class="fas fa-eraser"></i></button>
+            <span class="button-label">Remove</span>
+        </div>
+    </div>
+
+    <div id="editToolsContainer">
+        <div class="button-wrapper">
+            <button id="undoBtn"><i class="fas fa-undo"></i></button>
+            <span class="button-label">Undo</span>
+        </div>
+        <div class="button-wrapper">
+            <button id="redoBtn"><i class="fas fa-redo"></i></button>
+            <span class="button-label">Redo</span>
+        </div>
+        <div class="button-wrapper">
+            <button id="resetBtn"><i class="fas fa-trash"></i></button>
+            <span class="button-label">Reset</span>
+        </div>
+    </div>
+
     <canvas id="drawingCanvas"></canvas>
-    <canvas id="magnifier" style="position: absolute; display: none;"></canvas>
-    <div id="buttonGroup">
-        <button id="drawBtn" class="icon-btn">
-            <i class="fas fa-pencil-alt"></i>
-            <span>Draw</span>
-        </button>
-        <button id="removeBtn" class="icon-btn">
-            <i class="fas fa-eraser"></i>
-            <span>Remove</span>
-        </button>
-    </div>
+    <canvas id="magnifier"></canvas>
+
     <script src="script.js"></script>
 </body>
 </html>
